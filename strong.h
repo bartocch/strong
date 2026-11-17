@@ -1,0 +1,4 @@
+#ifndef STRONG_STRONG_H
+#define STRONG_STRONG_H
+
+#endif // STRONG_STRONG_H
