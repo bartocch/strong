@@ -10,9 +10,6 @@ namespace strong_details {
     concept strong_value = (std::is_arithmetic_v<T>
         || (std::is_class_v<T> && !std::is_abstract_v<T>)   // non-abstract classes only
         || std::is_pointer_v<T>)
-        && !std::is_reference_v<T>
-        && !std::is_function_v<T>
-        && !std::is_void_v<T>
         && !std::is_const_v<T>
         && !std::is_volatile_v<T>;
 }
