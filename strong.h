@@ -38,9 +38,8 @@ public:
     }
 };
 
-// TODO: support multiple skills
-template <strong_details::strong_value T, typename Tag, typename Skill>
-class strong : public Skill::mixin<strong<T, Tag, Skill>> {
+template <strong_details::strong_value T, typename Tag, typename... Skills>
+class strong : public Skills::template mixin<strong<T, Tag, Skills...>>... {
 public:
     friend skill_access;
 
@@ -55,11 +54,11 @@ public:
     constexpr explicit strong(Args&&... args)
         : value_(std::forward<Args>(args)...) {}
 
-    strong(strong<T, Tag, Skill>& strong)
+    strong(strong<T, Tag, Skills...>& strong)
         requires std::copy_constructible<T>
         : value_(strong.value_) {}
 
-    strong(strong<T, Tag, Skill>&& strong)
+    strong(strong<T, Tag, Skills...>&& strong)
         requires std::move_constructible<T>
         : value_(std::move(strong.value_)) {}
 
