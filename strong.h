@@ -62,10 +62,6 @@ public:
         requires std::move_constructible<T>
         : value_(std::move(strong.value_)) {}
 
-    const T& value() const {
-        return value_;
-    }
-
 private:
     T value_;
 };
