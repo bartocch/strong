@@ -175,7 +175,7 @@ postaci aliasu, np. `using addable = addable_with<std::plus<>{}>;`. W opisie `a`
 
 Należy zaimplementować szablony:
 
-* `is_strong_v<S>` – true wtedy i tylko wtedy, gdy `S` po usunięciu referencji i kwalifikatorów `const` i `volatile`
+* `is_strong_v<S>` – `true` wtedy i tylko wtedy, gdy `S` po usunięciu referencji i kwalifikatorów `const` i `volatile`
   jest silnym typem;
 
 * `underlying_t<S>` – typ wartości silnego typu `S`;

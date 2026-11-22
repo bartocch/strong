@@ -21,6 +21,8 @@ namespace strong_details {
 template <typename S>
 using underlying_t = S::value_type;
 
+// TODO: is_strong_v<S> and has_family_v<S, F>
+
 class skill_access {
 public:
     // TODO: shouldn't compile when S isn't instance of strong
@@ -46,12 +48,12 @@ class strong : public Skills::template mixin<strong<T, Tag, Skills...>>... {
     T value_;
 
 public:
-    friend skill_access;
+    friend class skill_access;
 
     using value_type = T;
     using tag_type = Tag;
 
-    strong()
+    constexpr strong()
         requires std::default_initializable<T>
         : value_() {}
 
@@ -59,15 +61,30 @@ public:
     constexpr explicit strong(Args&&... args)
         : value_(std::forward<Args>(args)...) {}
 
-    strong(strong& strong)
+    constexpr strong(strong& strong)
         requires std::copy_constructible<T>
         : value_(strong.value_) {}
 
-    strong(strong&& strong) noexcept
+    constexpr strong(strong&& strong) noexcept
         requires std::move_constructible<T>
         : value_(std::move(strong.value_)) {}
+
+    constexpr strong& operator=(const strong& other)
+        requires std::copyable<T>
+    {
+        value_ = other.value_;
+        return *this;
+    }
+
+    constexpr strong& operator=(strong&& other) noexcept
+        requires std::movable<T>
+    {
+        value_ = std::move(other.value_);
+        return *this;
+    }
 };
 
+// TODO: flatten skill packs for creating strong types
 template <typename... Skills>
 struct skills {};
 
@@ -119,22 +136,42 @@ struct addable_with {
 
 using addable = addable_with<std::plus{}>;
 
+
 template <typename Scalar>
 struct scalable {
     using family = ops::scaling;
 
+    template <typename T>
+    static constexpr bool accepts = requires(const Scalar& a, const T& b) {
+        { Op(a, b) } -> std::constructible_from<T>;
+    };
+
     template <typename S>
     struct mixin {
-        friend constexpr S operator*(const Scalar& a, const S& b) {
-            return S(Op(a, skill_access::get(b)));
+        friend constexpr S operator*(const S& a, const Scalar& s) {
+            return S(skill_access::get(a) * s);
         }
 
-        friend constexpr S operator*(const S& a, const Scalar& b) {
-            return S(Op(skill_access::get(a), b));
+        friend constexpr S operator*(const Scalar& s, const S& a) {
+            return S(s * skill_access::get(a));
         }
 
-        friend constexpr S operator/(const S& a, const Scalar& b) {
-            return S(Op(skill_access::get(a), b));
+        friend constexpr S operator/(const S& a, const Scalar& s) {
+            return S(skill_access::get(a) / s);
+        }
+
+        constexpr S& operator*=(const Scalar& s) {
+            auto& self = static_cast<S&>(*this);
+            self = self * s;
+            return self;
+        }
+
+        // TODO: *= the other way?
+
+        constexpr S& operator/=(const Scalar& s) {
+            auto& self = static_cast<S&>(*this);
+            self = self / s;
+            return self;
         }
     };
 };
@@ -148,14 +185,10 @@ struct equality_with {
         friend constexpr bool operator==(const S& a, const S& b) {
             return Eq(skill_access::get(a), skill_access::get(b));
         }
-
-        friend constexpr bool operator!=(const S& a, const S& b) {
-            return !Eq(skill_access::get(a), skill_access::get(b));
-        }
     };
 };
 
-using equality = equality_with<std::equal_to<>{}>;
+using equality = equality_with<std::equal_to{}>;
 
 
 template <auto Cmp>
@@ -171,37 +204,31 @@ struct ordered_with {
         friend constexpr auto operator<=>(const S& a, const S& b) {
             return Cmp(skill_access::get(a), skill_access::get(b));
         }
-
-        friend constexpr bool operator==(const S& a, const S& b) {
-            return Cmp(skill_access::get(a), skill_access::get(b)) == 0;
-        }
-
-        friend constexpr bool operator!=(const S& a, const S& b) {
-            return Cmp(skill_access::get(a), skill_access::get(b)) != 0;
-        }
     };
 };
 
 using ordered = ordered_with<std::compare_three_way{}>;
 
 
-template <std::size_t N>
-struct FixedString {
-    char data[N]{};
+namespace str_literal {
+    template <std::size_t N>
+    struct FixedString {
+        char data[N]{};
 
-    constexpr FixedString(const char (&str)[N]) {
-        std::copy_n(str, N, data);
-    }
-};
+        constexpr FixedString(const char (&str)[N]) {
+            std::copy_n(str, N, data);
+        }
+    };
+} // namespace str_literal
 
-template <FixedString suffix = "">
+template <str_literal::FixedString suffix = "">
 struct printable {
     using family = ops::printing;
 
     template <typename S>
     struct mixin {
         friend std::ostream& operator<<(std::ostream& os, const S& s) {
-            return os << skill_access::get(s) << suffix;
+            return os << skill_access::get(s) << suffix.data;
         }
     };
 };
@@ -211,25 +238,43 @@ template <auto H>
 struct hashable_with {
     using family = ops::hashing;
 
+    // TODO: is this correct?
+    using needs = equality;
+
     template <typename S>
-    struct mixin {};
+    struct mixin {
+        constexpr auto operator()(const S& s) const {
+            return H(skill_access::get(s));
+        }
+    };
 };
 
 template <typename S>
 using hashable = hashable_with<std::hash<S>{}>;
 
 
-template <typename Target, auto Conv>
+template <typename Target, auto Conv = std::identity{}>
 struct convertible_to {
     template <typename S>
-    struct mixin {};
+    struct mixin {
+        constexpr explicit operator Target() {
+            return Target(Conv(static_cast<S&>(*this)));
+        }
+    };
 };
 
 
 template <typename Other, typename Result, auto Op = std::divides{}>
 struct divisible_by {
     template <typename S>
-    struct mixin {};
-};
+    struct mixin {
+        constexpr friend Result operator/(const S& a, const Other& other) {
+            return Op(skill_access::get(a), other);
+        }
 
+        constexpr friend Result operator/(const S& a, const S& b) {
+            return Op(skill_access::get(a), skill_access::get(b));
+        }
+    };
+};
 #endif // STRONG_STRONG_H
