@@ -23,4 +23,5 @@ IndentCaseLabels: true
 PackConstructorInitializers: CurrentLine
 RemoveBracesLLVM: true
 NamespaceIndentation: All
+BreakTemplateDeclarations: Yes
 ...

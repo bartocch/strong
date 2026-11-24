@@ -18,18 +18,34 @@ namespace strong_details {
         !std::is_const_v<T> && !std::is_volatile_v<T>;
 } // namespace strong_details
 
+template <strong_details::strong_value T, typename Tag, typename... Skills>
+class strong;
+
+namespace strong_check {
+    template <typename... S>
+    struct is_strong : std::false_type {};
+
+    template <typename... S>
+    struct is_strong<strong<S...>> : std::true_type {};
+}
+
+template <typename S>
+concept is_strong_v = strong_check::is_strong<std::decay<S>>::value;
+
 template <typename S>
 using underlying_t = S::value_type;
 
-// TODO: is_strong_v<S> and has_family_v<S, F>
+// TODO has_family_v<S, F>
 
 class skill_access {
 public:
     // TODO: shouldn't compile when S isn't instance of strong
-    template <typename S>
+    // Does this work? If not, `requires` should
+    template <is_strong_v S>
     static underlying_t<S>& get(S& s) {
         return s.value_;
     }
+
     // TODO: shouldn't compile when S isn't instance of strong
     template <typename S>
     static const underlying_t<S>& get(const S& s) {
@@ -70,15 +86,13 @@ public:
         : value_(std::move(strong.value_)) {}
 
     constexpr strong& operator=(const strong& other)
-        requires std::copyable<T>
-    {
+        requires std::copyable<T> {
         value_ = other.value_;
         return *this;
     }
 
     constexpr strong& operator=(strong&& other) noexcept
-        requires std::movable<T>
-    {
+        requires std::movable<T> {
         value_ = std::move(other.value_);
         return *this;
     }
@@ -90,11 +104,17 @@ struct skills {};
 
 namespace ops {
     struct access {};
+
     struct addition {};
+
     struct scaling {};
+
     struct equality {};
+
     struct ordering {};
+
     struct printing {};
+
     struct hashing {};
 } // namespace ops
 
@@ -116,7 +136,8 @@ struct addable_with {
     using family = ops::addition;
 
     template <typename T>
-    static constexpr bool accepts = requires(const T& a, const T& b) {
+    static constexpr bool accepts = requires(const T& a, const T& b)
+    {
         { Op(a, b) } -> std::constructible_from<T>;
     };
 
@@ -142,7 +163,8 @@ struct scalable {
     using family = ops::scaling;
 
     template <typename T>
-    static constexpr bool accepts = requires(const Scalar& a, const T& b) {
+    static constexpr bool accepts = requires(const Scalar& a, const T& b)
+    {
         { Op(a, b) } -> std::constructible_from<T>;
     };
 
@@ -180,6 +202,7 @@ struct scalable {
 template <auto Eq>
 struct equality_with {
     using family = ops::equality;
+
     template <typename S>
     struct mixin {
         friend constexpr bool operator==(const S& a, const S& b) {
@@ -238,7 +261,7 @@ template <auto H>
 struct hashable_with {
     using family = ops::hashing;
 
-    // TODO: is this correct?
+    // TODO: check if correct
     using needs = equality;
 
     template <typename S>

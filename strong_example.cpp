@@ -40,17 +40,17 @@ namespace {
 
     // Deklarujemy aliasy nazw kilku silnych typów.
     using seconds =
-        strong<double, struct seconds_tag, arithmetic<double>, printable<"s">>;
+    strong<double, struct seconds_tag, arithmetic<double>, printable<"s">>;
 
     using speed = strong<double, struct speed_tag, arithmetic<double>,
                          comparable, printable<"m/s">>;
 
     using meters =
-        strong<double, struct meters_tag, arithmetic<double>, comparable,
-               printable<"m">, divisible_by<seconds, speed>, readable>;
+    strong<double, struct meters_tag, arithmetic<double>, comparable,
+           printable<"m">, divisible_by<seconds, speed>, readable>;
 
     using kilograms =
-        strong<double, struct kilograms_tag, arithmetic<double>, comparable>;
+    strong<double, struct kilograms_tag, arithmetic<double>, comparable>;
 
     using radians = strong<double, struct radians_tag, readable>;
 
@@ -65,12 +65,12 @@ namespace {
 
     // Używamy wbudowanych umiejętności z własnymi implementacjami operacji.
     using degrees =
-        strong<double, struct degrees_tag, addable_with<[](double a, double b) {
-                   return std::fmod(a + b, 360.0);
-               }>,
-               equality, printable<"°">, convertible_to<radians, [](double d) {
-                   return d * std::numbers::pi / 180.0;
-               }>>;
+    strong<double, struct degrees_tag, addable_with<[](double a, double b) {
+               return std::fmod(a + b, 360.0);
+           }>,
+           equality, printable<"°">, convertible_to<radians, [](double d) {
+               return d * std::numbers::pi / 180.0;
+           }>>;
 
     // Bez umiejętności ordered i readable silny typ nie ma porównań ani metody
     // value().
@@ -89,15 +89,17 @@ namespace {
     constexpr auto case_insensitive_hash = [](const std::string& s) {
         std::string lower = s;
         std::ranges::transform(lower, lower.begin(),
-                               [](char c) { return std::tolower(c); });
+                               [](char c) {
+                                   return std::tolower(c);
+                               });
         return std::hash<std::string>{}(lower);
     };
 
     // Umiejętność ordered_with dokłada równość zgodną z porządkiem, a
     // hashable_with korzysta z tej równości.
     using word =
-        strong<std::string, struct word_tag, ordered_with<case_insensitive>,
-               hashable_with<case_insensitive_hash>>;
+    strong<std::string, struct word_tag, ordered_with<case_insensitive>,
+           hashable_with<case_insensitive_hash>>;
 
     // Jawnie podana umiejętność ma pierwszeństwo przed zależnością.
     using exact_word = strong<std::string, struct exact_word_tag,
@@ -123,7 +125,7 @@ namespace {
     };
 
     using path =
-        strong<std::string, struct path_tag, joinable, equality, printable<>>;
+    strong<std::string, struct path_tag, joinable, equality, printable<>>;
 
     // Umiejętność użytkownika z rodziny umiejętności wbudowanej: godziny są
     // równe, jeżeli wskazówka zegara pokazuje je w tym samym miejscu.
@@ -140,8 +142,10 @@ namespace {
 
     // Umiejętność hashable zależy od równości, a tę dostarcza same_on_dial.
     using hour =
-        strong<int, struct hour_tag, same_on_dial,
-               hashable_with<[](int h) { return std::hash<int>{}(h % 12); }>>;
+    strong<int, struct hour_tag, same_on_dial,
+           hashable_with<[](int h) {
+               return std::hash<int>{}(h % 12);
+           }>>;
 
     // Użytkownika tworzy umiejętność z własną rodziną, zależnościami i
     // operatorami ++.
@@ -225,7 +229,7 @@ int main() {
     assert(word{"Ala"} == word{"ALA"});
     assert(!(exact_word{"Ala"} == exact_word{"ALA"}));
     assert((exact_word{"Ala"} <=> exact_word{"ALA"}) ==
-           std::weak_ordering::equivalent);
+        std::weak_ordering::equivalent);
 
     std::unordered_set words{word{"Ala"}, word{"ALA"}, word{"Ola"}};
     assert(words.size() == 2);
