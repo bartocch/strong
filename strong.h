@@ -37,6 +37,55 @@ using underlying_t = S::value_type;
 
 // TODO has_family_v<S, F>
 
+template <typename... PackSkills>
+struct skills {
+    /** A base struct for the `strong` class to inherit skills from.
+     *  Only works if `Skills` have been flattened. */
+    template <typename T, typename Tag, typename... Skills>
+    struct mixin_base
+        : PackSkills::template mixin<strong<T, Tag, Skills...>>... {};
+};
+
+// TODO: merge namespaces
+namespace strong_details {
+    template <typename T, typename... S>
+    struct recursive_flatten {};
+
+    template <typename... CurrentSkills>
+    struct recursive_flatten<skills<CurrentSkills...>> {
+        using type = skills<CurrentSkills...>;
+    };
+
+    template <typename... CurrentSkills, typename Skill,
+              typename... OtherSkills>
+    struct recursive_flatten<skills<CurrentSkills...>, Skill, OtherSkills...> {
+        // Move `Skills` to the output list and queue the remaining
+        // skills and skill packs for processing.
+        using type = recursive_flatten<skills<CurrentSkills..., Skill>,
+                                       OtherSkills...>::type;
+    };
+
+    template <typename... CurrentSkills, typename... PackedSkills,
+              typename... OtherSkills>
+    struct recursive_flatten<skills<CurrentSkills...>, skills<PackedSkills...>,
+                             OtherSkills...> {
+        // Unpack `PackedSkills` and queue them for processing together with the
+        // remaining skills and skill packs.
+        using type = recursive_flatten<skills<CurrentSkills...>,
+                                       PackedSkills..., OtherSkills...>::type;
+    };
+
+    template <typename... Skills>
+    struct flatten {
+        using type = recursive_flatten<skills<>, Skills...>::type;
+    };
+
+    /** Flattens the provided skill list.
+     *  Preserves the order in which skills appeared on the non-flattened list. */
+    template <typename... Skills>
+    using flatten_t = flatten<Skills...>::type;
+} // namespace strong_details
+
 class skill_access {
 public:
     // TODO: shouldn't compile when S isn't instance of strong
@@ -60,7 +109,8 @@ public:
 };
 
 template <strong_details::strong_value T, typename Tag, typename... Skills>
-class strong : public Skills::template mixin<strong<T, Tag, Skills...>>... {
+class strong : public strong_details::flatten_t<skills<Skills...>>
+                                    ::mixin_base<T, Tag, Skills...> {
     T value_;
 
 public:
@@ -97,10 +147,6 @@ public:
         return *this;
     }
 };
-
-// TODO: flatten skill packs for creating strong types
-template <typename... Skills>
-struct skills {};
 
 namespace ops {
     struct access {};
