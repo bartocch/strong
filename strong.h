@@ -40,7 +40,7 @@ using underlying_t = S::value_type;
 template <typename... PackSkills>
 struct skills {
     /** A base struct for the `strong` class to inherit skills from.
-     *  Only works if `Skills` have been flattened. */
+     *  Only works if `PackSkills` have been flattened. */
     template <typename T, typename Tag, typename... Skills>
     struct mixin_base
         : PackSkills::template mixin<strong<T, Tag, Skills...>>... {};
