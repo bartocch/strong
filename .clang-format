@@ -1,0 +1,27 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+TabWidth: 4
+IndentWidth: 4
+ColumnLimit: 80
+AccessModifierOffset: -4
+AlignAfterOpenBracket: true
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 2
+AllowShortBlocksOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AlwaysBreakTemplateDeclarations: Yes
+BinPackParameters: BinPack
+BreakBeforeBraces: Attach
+PointerAlignment: Left
+AllowShortEnumsOnASingleLine: false
+InsertNewlineAtEOF: true
+MaxEmptyLinesToKeep: 2
+AllowShortFunctionsOnASingleLine: Empty
+IndentCaseLabels: true
+PackConstructorInitializers: CurrentLine
+RemoveBracesLLVM: true
+NamespaceIndentation: All
+BreakTemplateDeclarations: Yes
+...
