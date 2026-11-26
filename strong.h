@@ -35,8 +35,6 @@ concept is_strong_v = strong_check::is_strong<std::decay<S>>::value;
 template <typename S>
 using underlying_t = S::value_type;
 
-// TODO has_family_v<S, F>
-
 template <typename... PackSkills>
 struct skills;
 
@@ -96,7 +94,19 @@ namespace strong_details {
         using type = recursive_flatten<skills<CurrentSkills...>,
                                        PackedSkills..., OtherSkills...>::type;
     };
+
+
+    template <typename S, typename F>
+    struct has_family {};
+
+    template <typename F, typename T, typename Tag, typename... Skills>
+    struct has_family<strong<T, Tag, Skills...>, F> {
+        constexpr static bool value = strong_details::contains_family<F, Skills...>();
+    };
 } // namespace strong_details
+
+template <typename S, typename F>
+constexpr bool has_family_v = strong_details::has_family<S, F>::value;
 
 template <typename... PackSkills>
 struct skills {
