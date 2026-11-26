@@ -38,16 +38,25 @@ using underlying_t = S::value_type;
 // TODO has_family_v<S, F>
 
 template <typename... PackSkills>
-struct skills {
-    /** A base struct for the `strong` class to inherit skills from.
-     *  Only works if `PackSkills` have been flattened. */
-    template <typename T, typename Tag, typename... Skills>
-    struct mixin_base
-        : PackSkills::template mixin<strong<T, Tag, Skills...>>... {};
-};
+struct skills;
 
 // TODO: merge namespaces
 namespace strong_details {
+    /** Returns true if the provided skill list contains a skill from the
+     *  specified family. */
+    template <typename Family>
+    constexpr bool contains_family() {
+        return false;
+    }
+
+    template <typename Family, typename Skill, typename... Skills>
+    constexpr bool contains_family() {
+        if constexpr (std::is_same_v<typename Skill::family, Family>) {
+            return true;
+        }
+        return contains_family<Family, Skills...>();
+    }
+
     template <typename T, typename... S>
     struct recursive_flatten {};
 
@@ -58,6 +67,9 @@ namespace strong_details {
 
     template <typename... CurrentSkills, typename Skill,
               typename... OtherSkills>
+        // Don't allow two skills from the same family to appear on the
+        // flattened list.
+        requires(!contains_family<typename Skill::family, CurrentSkills...>())
     struct recursive_flatten<skills<CurrentSkills...>, Skill, OtherSkills...> {
         // Move `Skills` to the output list and queue the remaining
         // skills and skill packs for processing.
@@ -74,17 +86,21 @@ namespace strong_details {
         using type = recursive_flatten<skills<CurrentSkills...>,
                                        PackedSkills..., OtherSkills...>::type;
     };
-
-    template <typename... Skills>
-    struct flatten {
-        using type = recursive_flatten<skills<>, Skills...>::type;
-    };
-
-    /** Flattens the provided skill list.
-     *  Preserves the order in which skills appeared on the non-flattened list. */
-    template <typename... Skills>
-    using flatten_t = flatten<Skills...>::type;
 } // namespace strong_details
+
+template <typename... PackSkills>
+struct skills {
+    /** A base struct for the `strong` class to inherit skills from.
+     *  Only works if `PackSkills` have been flattened. */
+    template <typename T, typename Tag, typename... Skills>
+    struct mixin_base
+        : PackSkills::template mixin<strong<T, Tag, Skills...>>... {};
+
+    /** Flattens the skill packs inside this skill pack.
+     *  Preserves the order in which skills appeared on the non-flattened list. */
+    using flatten_t =
+        strong_details::recursive_flatten<skills<>, PackSkills...>::type;
+};
 
 class skill_access {
 public:
@@ -109,8 +125,8 @@ public:
 };
 
 template <strong_details::strong_value T, typename Tag, typename... Skills>
-class strong : public strong_details::flatten_t<skills<Skills...>>
-                                    ::mixin_base<T, Tag, Skills...> {
+class strong : public skills<Skills...>::flatten_t
+                                       ::mixin_base<T, Tag, Skills...> {
     T value_;
 
 public:
