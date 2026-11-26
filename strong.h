@@ -42,6 +42,12 @@ struct skills;
 
 // TODO: merge namespaces
 namespace strong_details {
+    /** Satisfied iff `Skill` has a using declaration inside called 'family'. */
+    template <typename Skill>
+    concept has_family_defined = requires {
+        typename Skill::family;
+    };
+
     /** Returns true if the provided skill list contains a skill from the
      *  specified family. */
     template <typename Family>
@@ -51,8 +57,12 @@ namespace strong_details {
 
     template <typename Family, typename Skill, typename... Skills>
     constexpr bool contains_family() {
-        if constexpr (std::is_same_v<typename Skill::family, Family>) {
-            return true;
+        // TODO: why do nested ifs work, but not a single expression like
+        // if constexpr(A && B)?
+        if constexpr (has_family_defined<Skill>) {
+            if constexpr (std::is_same_v<typename Skill::family, Family>) {
+                return true;
+            }
         }
         return contains_family<Family, Skills...>();
     }
